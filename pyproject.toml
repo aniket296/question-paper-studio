@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "question-paper-studio"
+version = "1.0.0"
+description = "Template-Based Question Paper Creation & Management Studio — 100% Offline Desktop Application"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+    { name = "Question Paper Studio Team" }
+]
+keywords = ["education", "question-paper", "exam-generator", "pyside6", "pdf", "docx", "offline"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: X11 Applications :: Qt",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education :: Testing",
+]
+dependencies = [
+    "PySide6>=6.6.0",
+    "pydantic>=2.6.0",
+    "python-docx>=1.1.0",
+    "lxml>=5.1.0",
+    "latex2mathml>=3.77.0",
+    "Pillow>=10.2.0",
+    "pypdf>=4.0.0",
+    "pytest>=8.0.0",
+    "pytest-qt>=4.4.0",
+    "pyinstaller>=6.4.0",
+]
+
+[project.scripts]
+question-paper-studio = "src.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "scripts*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+qt_api = "pyside6"
