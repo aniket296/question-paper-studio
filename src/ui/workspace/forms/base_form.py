@@ -116,6 +116,34 @@ class BaseQuestionForm(QWidget):
         p_lay.addWidget(self.editor_prompt)
         self.root_lay.addWidget(prompt_box)
 
+        # 2b. Collapsible Bilingual / Regional Translation Prompt Editor
+        self.btn_toggle_bilingual = QPushButton("🌐 Bilingual / Regional Language Prompt")
+        self.btn_toggle_bilingual.setCheckable(True)
+        self.btn_toggle_bilingual.setStyleSheet("text-align: left; font-weight: 600; padding: 5px; color: #0284C7;")
+        self.btn_toggle_bilingual.clicked.connect(self._toggle_bilingual_drawer)
+        self.root_lay.addWidget(self.btn_toggle_bilingual)
+
+        self.bilingual_drawer = QWidget()
+        bi_lay = QVBoxLayout(self.bilingual_drawer)
+        bi_lay.setContentsMargins(0, 0, 0, 0)
+        bi_lay.setSpacing(4)
+
+        bi_top = QHBoxLayout()
+        bi_lbl = QLabel("Secondary / Regional Language Prompt (Hindi, Marathi, Devanagari, etc.):")
+        bi_lbl.setStyleSheet("font-weight: 600; color: #475569;")
+        bi_top.addWidget(bi_lbl, 1)
+
+        self.editor_prompt_secondary = RichTextEditor(
+            placeholder="हिंदी / क्षेत्रीय भाषा प्रश्न प्रॉम्प्ट दर्ज करें...",
+            parent=self,
+        )
+        self.editor_prompt_secondary.text_changed.connect(self._on_field_changed)
+        bi_lay.addLayout(bi_top)
+        bi_lay.addWidget(self.editor_prompt_secondary)
+
+        self.bilingual_drawer.setVisible(False)
+        self.root_lay.addWidget(self.bilingual_drawer)
+
         # 3. Container for Specialized Payload Widgets (MCQ options, Match tables, Blanks, etc.)
         self.payload_container = QWidget()
         self.payload_lay = QVBoxLayout(self.payload_container)
@@ -153,6 +181,11 @@ class BaseQuestionForm(QWidget):
         self.solution_drawer.setVisible(visible)
         self.btn_toggle_solution.setText("▼ Model Answer / Scoring Rubric" if visible else "▶ Model Answer / Scoring Rubric")
 
+    def _toggle_bilingual_drawer(self) -> None:
+        visible = self.btn_toggle_bilingual.isChecked()
+        self.bilingual_drawer.setVisible(visible)
+        self.btn_toggle_bilingual.setText("▼ Bilingual / Regional Language Prompt" if visible else "🌐 Bilingual / Regional Language Prompt")
+
     def load_question(self, node: QuestionNode) -> None:
         """Populate base question fields and dispatch to payload loader."""
         self._block_signals = True
@@ -170,6 +203,16 @@ class BaseQuestionForm(QWidget):
             self.chk_page_break.setChecked(node.page_break_before)
 
             self.editor_prompt.set_html(node.prompt_html)
+
+            # Load bilingual secondary prompt if present
+            if node.prompt_secondary_html and node.prompt_secondary_html.strip():
+                self.editor_prompt_secondary.set_html(node.prompt_secondary_html)
+                self.btn_toggle_bilingual.setChecked(True)
+                self._toggle_bilingual_drawer()
+            else:
+                self.editor_prompt_secondary.set_html("")
+                self.btn_toggle_bilingual.setChecked(False)
+                self._toggle_bilingual_drawer()
 
             # Load model answer
             if node.marking_scheme and node.marking_scheme.model_answer_html:
@@ -190,11 +233,19 @@ class BaseQuestionForm(QWidget):
         node.page_break_before = self.chk_page_break.isChecked()
         node.prompt_html = self.editor_prompt.get_html()
 
+        sec_prompt = self.editor_prompt_secondary.get_html()
+        if sec_prompt and self.editor_prompt_secondary.get_plain_text().strip():
+            node.prompt_secondary_html = sec_prompt
+        else:
+            node.prompt_secondary_html = None
+
         sol_html = self.editor_solution.get_html()
         if sol_html and sol_html.strip() and self.editor_solution.get_plain_text().strip():
             if node.marking_scheme is None:
                 node.marking_scheme = MarkingScheme()
             node.marking_scheme.model_answer_html = sol_html
+
+        self._save_payload(node)
 
         self._save_payload(node)
 

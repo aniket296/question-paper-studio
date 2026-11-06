@@ -191,7 +191,17 @@ class OutlineTreeWidget(QWidget):
         num_label = labels.get(node.question_id, node.resolved_number or "•")
         clean_text = self._strip_html(node.prompt_html or "").strip()
         snippet = clean_text[:40] + ("..." if len(clean_text) > 40 else "")
-        display_text = f"{num_label} {snippet}" if snippet else f"{num_label} [Empty]"
+
+        badges: List[str] = []
+        if node.choice_group_id:
+            badges.append("[OR]")
+        if node.shared_passage_id:
+            badges.append("[Passage]")
+        if node.prompt_secondary_html and node.prompt_secondary_html.strip():
+            badges.append("[🌐]")
+        badge_prefix = " ".join(badges) + " " if badges else ""
+
+        display_text = f"{num_label} {badge_prefix}{snippet}" if snippet else f"{num_label} {badge_prefix}[Empty]"
         item.setText(0, display_text)
 
         # Marks badge
@@ -493,9 +503,25 @@ class OutlineTreeWidget(QWidget):
             act_down = menu.addAction("▼ Move Down")
             act_down.triggered.connect(self.on_move_down)
 
+            menu.addSeparator()
+
+            act_choice = menu.addAction("🔗 Manage Section Choice Groups (OR / K of N)...")
+            act_choice.triggered.connect(lambda: self._on_manage_choice_groups(iid))
+
+            act_passage = menu.addAction("📖 Add / Edit Shared Passage...")
+            act_passage.triggered.connect(lambda: self._on_manage_shared_passages(iid))
+
         elif itype == "section":
             act_add_q = menu.addAction("+ Add Question to Section")
             act_add_q.triggered.connect(self.on_add_question)
+
+            menu.addSeparator()
+
+            act_choice_sec = menu.addAction("🔗 Manage Choice Groups (OR / K of N)...")
+            act_choice_sec.triggered.connect(lambda: self._on_manage_choice_groups_section(iid))
+
+            act_passage_sec = menu.addAction("📖 Add / Edit Shared Passage...")
+            act_passage_sec.triggered.connect(lambda: self._on_manage_shared_passages_section(iid))
 
             menu.addSeparator()
 
@@ -503,3 +529,43 @@ class OutlineTreeWidget(QWidget):
             act_del_sec.triggered.connect(self.on_delete)
 
         menu.exec(self.tree.viewport().mapToGlobal(pos))
+
+    def _on_manage_choice_groups(self, question_id: str) -> None:
+        if not self.project:
+            return
+        lookup = QuestionTreeEngine.find_node(self.project, question_id)
+        if not lookup or not lookup.section:
+            return
+        self._on_manage_choice_groups_section(lookup.section.section_id)
+
+    def _on_manage_choice_groups_section(self, section_id: str) -> None:
+        if not self.project:
+            return
+        sec = QuestionTreeEngine.find_section(self.project, section_id)
+        if not sec:
+            return
+        from src.ui.workspace.choice_passage_dialog import ChoiceGroupManagerDialog
+        dlg = ChoiceGroupManagerDialog(sec, self.project, parent=self)
+        dlg.groups_changed.connect(lambda: self.tree_structure_changed.emit("Update Choice Groups"))
+        dlg.exec()
+        self.load_project(self.project)
+
+    def _on_manage_shared_passages(self, question_id: str) -> None:
+        if not self.project:
+            return
+        lookup = QuestionTreeEngine.find_node(self.project, question_id)
+        if not lookup or not lookup.section:
+            return
+        self._on_manage_shared_passages_section(lookup.section.section_id)
+
+    def _on_manage_shared_passages_section(self, section_id: str) -> None:
+        if not self.project:
+            return
+        sec = QuestionTreeEngine.find_section(self.project, section_id)
+        if not sec:
+            return
+        from src.ui.workspace.choice_passage_dialog import SharedPassageDialog
+        dlg = SharedPassageDialog(sec, parent=self)
+        dlg.passage_saved.connect(lambda p: self.tree_structure_changed.emit("Update Shared Passage"))
+        dlg.exec()
+        self.load_project(self.project)

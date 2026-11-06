@@ -9,13 +9,33 @@ from src.ui.workspace.forms.core_forms import (
     NormalQuestionForm,
     create_question_form,
 )
+from src.ui.workspace.forms.optional_forms import (
+    AssertionReasonQuestionForm,
+    CaseBasedQuestionForm,
+    DiagramLabellingQuestionForm,
+    LongAnswerQuestionForm,
+    NumericalDynamicQuestionForm,
+    OrderingSequencingQuestionForm,
+    ShortAnswerQuestionForm,
+    SourceBasedQuestionForm,
+    TrueFalseQuestionForm,
+)
 
 __all__ = [
     "BaseQuestionForm",
+    "NormalQuestionForm",
+    "MCQQuestionForm",
+    "MCQOptionRowWidget",
     "FillBlankQuestionForm",
     "MatchPairQuestionForm",
-    "MCQOptionRowWidget",
-    "MCQQuestionForm",
-    "NormalQuestionForm",
+    "TrueFalseQuestionForm",
+    "ShortAnswerQuestionForm",
+    "LongAnswerQuestionForm",
+    "AssertionReasonQuestionForm",
+    "CaseBasedQuestionForm",
+    "NumericalDynamicQuestionForm",
+    "OrderingSequencingQuestionForm",
+    "DiagramLabellingQuestionForm",
+    "SourceBasedQuestionForm",
     "create_question_form",
 ]

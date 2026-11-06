@@ -536,16 +536,36 @@ class MatchPairQuestionForm(BaseQuestionForm):
 
 
 def create_question_form(node: QuestionNode, parent: Optional[QWidget] = None) -> BaseQuestionForm:
-    """Factory creating the specialized editor form for `node.question_type`."""
-    if node.question_type == QuestionType.MCQ:
-        form = MCQQuestionForm(parent)
-    elif node.question_type == QuestionType.FILL_IN_THE_BLANK:
-        form = FillBlankQuestionForm(parent)
-    elif node.question_type == QuestionType.MATCH_THE_PAIR:
-        form = MatchPairQuestionForm(parent)
-    else:
-        # Default fallback to Normal descriptive question form
-        form = NormalQuestionForm(parent)
+    """Factory creating the specialized editor form for all 13 QuestionTypes."""
+    from src.ui.workspace.forms.optional_forms import (
+        AssertionReasonQuestionForm,
+        CaseBasedQuestionForm,
+        DiagramLabellingQuestionForm,
+        LongAnswerQuestionForm,
+        NumericalDynamicQuestionForm,
+        OrderingSequencingQuestionForm,
+        ShortAnswerQuestionForm,
+        SourceBasedQuestionForm,
+        TrueFalseQuestionForm,
+    )
 
+    mapping = {
+        QuestionType.NORMAL: NormalQuestionForm,
+        QuestionType.MCQ: MCQQuestionForm,
+        QuestionType.FILL_IN_THE_BLANK: FillBlankQuestionForm,
+        QuestionType.MATCH_THE_PAIR: MatchPairQuestionForm,
+        QuestionType.TRUE_FALSE: TrueFalseQuestionForm,
+        QuestionType.SHORT_ANSWER: ShortAnswerQuestionForm,
+        QuestionType.LONG_ANSWER: LongAnswerQuestionForm,
+        QuestionType.ASSERTION_REASON: AssertionReasonQuestionForm,
+        QuestionType.CASE_BASED: CaseBasedQuestionForm,
+        QuestionType.NUMERICAL_DYNAMIC: NumericalDynamicQuestionForm,
+        QuestionType.ORDERING_SEQUENCING: OrderingSequencingQuestionForm,
+        QuestionType.DIAGRAM_LABELLING: DiagramLabellingQuestionForm,
+        QuestionType.SOURCE_BASED: SourceBasedQuestionForm,
+    }
+
+    form_cls = mapping.get(node.question_type, NormalQuestionForm)
+    form = form_cls(parent)
     form.load_question(node)
     return form
