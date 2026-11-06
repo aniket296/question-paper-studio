@@ -90,3 +90,4 @@ def test_project_configuration_and_readme() -> None:
     readme_text = readme_path.read_text(encoding="utf-8")
     assert "Simple by Default, Powerful When Needed" in readme_text
     assert "Question Paper Studio" in readme_text
+

@@ -247,3 +247,4 @@ if __name__ == "__main__":
     result = generate_all_assets()
     print(f"Verified {len(result['fonts'])} bundled TTF fonts in {FONTS_DIR}")
     print(f"Generated {len(result['icons'])} UI icons in {ICONS_DIR}")
+
