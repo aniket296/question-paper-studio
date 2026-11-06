@@ -1,0 +1,98 @@
+{
+  "template_id": "builtin-minimal-exam",
+  "name": "Minimal Exam",
+  "created_at": "2026-11-06T08:01:05.032693Z",
+  "updated_at": "2026-11-06T08:01:05.032694Z",
+  "is_builtin": true,
+  "page_setup": {
+    "size": "A4",
+    "orientation": "portrait",
+    "custom_width_mm": null,
+    "custom_height_mm": null,
+    "margins_mm": {
+      "top": 15.0,
+      "bottom": 15.0,
+      "left": 15.0,
+      "right": 15.0
+    }
+  },
+  "header_height_mm": 24.0,
+  "footer_height_mm": 12.0,
+  "different_first_page": false,
+  "first_page_header_elements": [],
+  "running_header_elements": [
+    {
+      "element_id": "min-hdr-left",
+      "element_type": "text",
+      "x_mm": 0.0,
+      "y_mm": 3.0,
+      "width_mm": 110.0,
+      "height_mm": 7.0,
+      "font_family": "Noto Sans",
+      "font_size_pt": 12.0,
+      "bold": true,
+      "italic": false,
+      "underline": false,
+      "alignment": "left",
+      "color_hex": "#000000",
+      "line_thickness_pt": 1.0,
+      "content": "{{exam_name}} — {{subject_name}}"
+    },
+    {
+      "element_id": "min-hdr-right",
+      "element_type": "text",
+      "x_mm": 110.0,
+      "y_mm": 3.0,
+      "width_mm": 70.0,
+      "height_mm": 7.0,
+      "font_family": "Noto Sans",
+      "font_size_pt": 10.5,
+      "bold": true,
+      "italic": false,
+      "underline": false,
+      "alignment": "right",
+      "color_hex": "#000000",
+      "line_thickness_pt": 1.0,
+      "content": "{{duration}} | {{max_marks}} Marks"
+    },
+    {
+      "element_id": "min-hdr-line",
+      "element_type": "line",
+      "x_mm": 0.0,
+      "y_mm": 13.0,
+      "width_mm": 180.0,
+      "height_mm": 1.0,
+      "font_family": "Noto Sans",
+      "font_size_pt": 11.0,
+      "bold": false,
+      "italic": false,
+      "underline": false,
+      "alignment": "left",
+      "color_hex": "#000000",
+      "line_thickness_pt": 1.0,
+      "content": ""
+    }
+  ],
+  "first_page_footer_elements": [],
+  "running_footer_elements": [
+    {
+      "element_id": "min-ftr-pg",
+      "element_type": "page_number",
+      "x_mm": 0.0,
+      "y_mm": 2.0,
+      "width_mm": 180.0,
+      "height_mm": 6.0,
+      "font_family": "Noto Sans",
+      "font_size_pt": 9.0,
+      "bold": false,
+      "italic": false,
+      "underline": false,
+      "alignment": "right",
+      "color_hex": "#000000",
+      "line_thickness_pt": 1.0,
+      "content": "Page {{page_number}}"
+    }
+  ],
+  "imported_backdrop_asset": null,
+  "source_format": null
+}
