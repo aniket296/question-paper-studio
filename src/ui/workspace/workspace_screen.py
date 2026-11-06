@@ -26,11 +26,12 @@ from src.core.engine.marks_engine import MarksEngine
 from src.core.engine.numbering_fsm import QuestionTreeEngine, UndoRedoManager
 from src.core.engine.time_estimator import TimeEstimator
 from src.core.models.project_model import ProjectState
-from src.core.models.question_model import QuestionNode
+from src.core.models.question_model import QuestionNode, default_type_data_for
 from src.core.models.template_model import Template
 from src.core.storage.qpf_archive import QPFArchive
 from src.core.storage.template_store import TemplateStore
 from src.ui.workspace.exam_info_bar import ExamInfoBar
+from src.ui.workspace.forms.core_forms import BaseQuestionForm, create_question_form
 from src.ui.workspace.outline_tree import OutlineTreeWidget
 
 
@@ -199,31 +200,40 @@ class WorkspaceScreen(QWidget):
     def _build_center_pane_ui(self) -> None:
         """Construct the center question editor container."""
         lay = QVBoxLayout(self.center_editor_container)
-        lay.setContentsMargins(16, 16, 16, 16)
-        lay.setSpacing(10)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+
+        self.center_scroll = QScrollArea()
+        self.center_scroll.setWidgetResizable(True)
+        self.center_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+
+        # Container for question forms
+        self.center_content = QWidget()
+        self.center_content_lay = QVBoxLayout(self.center_content)
+        self.center_content_lay.setContentsMargins(12, 12, 12, 12)
+        self.center_content_lay.setSpacing(10)
 
         # Header for active question
         self.lbl_active_header = QLabel("Question Editor")
         self.lbl_active_header.setStyleSheet("font-size: 13pt; font-weight: 700; color: #0F172A;")
-        lay.addWidget(self.lbl_active_header)
+        self.center_content_lay.addWidget(self.lbl_active_header)
 
         self.lbl_active_meta = QLabel("Select a question from the outline tree on the left to edit.")
         self.lbl_active_meta.setStyleSheet("color: #64748B; font-size: 10pt;")
-        lay.addWidget(self.lbl_active_meta)
-
-        # Question Content Preview Frame (ready to receive Phase 4.2 RichTextEditor)
-        self.editor_slot = QFrame()
-        self.editor_slot.setStyleSheet("background-color: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 4px;")
-        slot_lay = QVBoxLayout(self.editor_slot)
-        slot_lay.setContentsMargins(16, 16, 16, 16)
+        self.center_content_lay.addWidget(self.lbl_active_meta)
 
         self.lbl_editor_preview = QLabel("Question body will appear here.")
-        self.lbl_editor_preview.setWordWrap(True)
-        self.lbl_editor_preview.setStyleSheet("color: #334155; font-size: 11pt;")
-        slot_lay.addWidget(self.lbl_editor_preview)
-        slot_lay.addStretch(1)
+        self.lbl_editor_preview.setVisible(False)
+        self.center_content_lay.addWidget(self.lbl_editor_preview)
 
-        lay.addWidget(self.editor_slot, 1)
+        # Active form slot
+        self.form_slot = QWidget()
+        self.form_slot_lay = QVBoxLayout(self.form_slot)
+        self.form_slot_lay.setContentsMargins(0, 0, 0, 0)
+        self.center_content_lay.addWidget(self.form_slot, 1)
+
+        self.center_scroll.setWidget(self.center_content)
+        lay.addWidget(self.center_scroll)
 
     def _build_right_pane_ui(self) -> None:
         """Construct the right-hand paper summary & statistics container."""
@@ -445,6 +455,32 @@ class WorkspaceScreen(QWidget):
         marks_str = f"{int(marks)} M" if marks.is_integer() else f"{marks:g} M"
         self.lbl_active_meta.setText(f"Marks: {marks_str}  |  Section: {lookup.section.title if lookup.section else 'Main'}")
         self.lbl_editor_preview.setText(clean_text or "[Empty Question Content]")
+
+        # Mount specialized form
+        while self.form_slot_lay.count():
+            item = self.form_slot_lay.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        form = create_question_form(node, parent=self)
+        form.form_modified.connect(lambda: self._on_form_modified(node))
+        form.question_type_changed.connect(lambda new_t: self._on_question_type_changed(node, new_t))
+        self.active_form = form
+        self.form_slot_lay.addWidget(form)
+
+    def _on_form_modified(self, node: QuestionNode) -> None:
+        self.has_unsaved_changes = True
+        self.lbl_status_save.setText("Unsaved changes*")
+        clean_text = self.outline_tree._strip_html(node.prompt_html or "").strip()
+        self.lbl_editor_preview.setText(clean_text or "[Empty Question Content]")
+        self.refresh_status_and_summary()
+
+    def _on_question_type_changed(self, node: QuestionNode, new_type: QuestionType) -> None:
+        node.question_type = new_type
+        node.type_data = default_type_data_for(new_type)
+        self.record_undo_state(f"Change Question Type to {new_type.value}")
+        self.outline_tree.load_project(self.project, select_question_id=node.question_id)
+        self._on_question_selected(node.question_id)
 
     def _on_section_selected(self, section_id: str) -> None:
         if not self.project:
