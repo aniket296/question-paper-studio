@@ -33,6 +33,7 @@ from src.core.storage.autosave_manager import AutosaveManager, RecoveryCandidate
 from src.core.storage.sqlite_bank import SQLiteQuestionBank
 from src.core.storage.template_store import TemplateStore
 from src.ui.home.home_screen import HomeScreen
+from src.ui.template_editor.template_editor_window import TemplateEditorWindow
 
 DEFAULT_WORKSPACE_DIR = Path.home() / ".question_paper_studio"
 
@@ -99,10 +100,13 @@ class MainWindow(QMainWindow):
         self.home_screen.create_template_requested.connect(self.open_new_template_editor)
         self.home_screen.edit_template_requested.connect(self.open_edit_template_editor)
 
-        # Route 1: Template Editor slot
-        self.template_editor_view: QWidget = _PlaceholderRouteView("Template Designer", self)
-        if isinstance(self.template_editor_view, _PlaceholderRouteView):
-            self.template_editor_view.back_to_home_requested.connect(self.navigate_home)
+        # Route 1: Template Editor
+        self.template_editor_view = TemplateEditorWindow(
+            template_store=self.template_store,
+            parent=self,
+        )
+        self.template_editor_view.back_to_home_requested.connect(self.navigate_home)
+        self.template_editor_view.template_saved.connect(self._on_template_saved)
 
         # Route 2: Paper Workspace slot
         self.workspace_view: QWidget = _PlaceholderRouteView("Question Paper Workspace", self)
@@ -114,6 +118,11 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.workspace_view)        # Index 2
 
         self.statusBar().showMessage("Ready — Select a template to create a question paper.")
+
+    def _on_template_saved(self, template: Template) -> None:
+        """Handle template saved in visual editor."""
+        self.home_screen.refresh_templates()
+        self.statusBar().showMessage(f"Template '{template.name}' saved successfully.")
 
     def set_template_editor_widget(self, widget: QWidget) -> None:
         """Replace Route 1 with the full WYSIWYG `TemplateEditorWindow` widget."""
