@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -30,8 +32,11 @@ from src.core.models.question_model import QuestionNode, default_type_data_for
 from src.core.models.template_model import Template
 from src.core.storage.qpf_archive import QPFArchive
 from src.core.storage.template_store import TemplateStore
+from src.rendering.pdf_exporter import PDFExporter
 from src.ui.workspace.exam_info_bar import ExamInfoBar
+from src.ui.workspace.export_dialog import ExportDialog
 from src.ui.workspace.forms.core_forms import BaseQuestionForm, create_question_form
+from src.ui.workspace.live_preview_pane import LivePreviewPane
 from src.ui.workspace.outline_tree import OutlineTreeWidget
 
 
@@ -107,15 +112,17 @@ class WorkspaceScreen(QWidget):
         tb_lay.addStretch(1)
 
         self.btn_export = QPushButton("📤 Export (PDF / Word)")
+        self.btn_export.clicked.connect(self.open_export_dialog)
         tb_lay.addWidget(self.btn_export)
 
         self.btn_print = QPushButton("🖨 Print")
+        self.btn_print.clicked.connect(self.print_paper)
         tb_lay.addWidget(self.btn_print)
 
         self.btn_toggle_preview = QPushButton("👁 Live Preview")
         self.btn_toggle_preview.setCheckable(True)
         self.btn_toggle_preview.setChecked(True)
-        self.btn_toggle_preview.clicked.connect(self._toggle_preview_pane)
+        self.btn_toggle_preview.toggled.connect(self._toggle_preview_pane)
         tb_lay.addWidget(self.btn_toggle_preview)
 
         root_lay.addWidget(tb_frame)
@@ -236,14 +243,32 @@ class WorkspaceScreen(QWidget):
         lay.addWidget(self.center_scroll)
 
     def _build_right_pane_ui(self) -> None:
-        """Construct the right-hand paper summary & statistics container."""
+        """Construct the right-hand container with Live Print Preview and Blueprint Audit tabs."""
         lay = QVBoxLayout(self.right_preview_container)
-        lay.setContentsMargins(12, 12, 12, 12)
-        lay.setSpacing(8)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+
+        self.right_tabs = QTabWidget()
+        self.right_tabs.setStyleSheet("""
+            QTabBar::tab {
+                font-weight: 600;
+                padding: 6px 12px;
+            }
+        """)
+
+        # Tab 0: Live Print Preview
+        self.live_preview = LivePreviewPane(project=self.project, parent=self)
+        self.right_tabs.addTab(self.live_preview, "📄 Live Preview")
+
+        # Tab 1: Paper Blueprint & Marks Audit
+        audit_widget = QWidget()
+        audit_lay = QVBoxLayout(audit_widget)
+        audit_lay.setContentsMargins(12, 12, 12, 12)
+        audit_lay.setSpacing(8)
 
         title_lbl = QLabel("📊 Paper Blueprint & Marks Audit")
         title_lbl.setStyleSheet("font-size: 11pt; font-weight: 700; color: #1E293B;")
-        lay.addWidget(title_lbl)
+        audit_lay.addWidget(title_lbl)
 
         # Marks summary card
         self.card_marks = QFrame()
@@ -261,19 +286,19 @@ class WorkspaceScreen(QWidget):
         card_lay.addWidget(self.lbl_audit_marks)
         card_lay.addWidget(self.lbl_audit_target)
         card_lay.addWidget(self.lbl_audit_status)
-        lay.addWidget(self.card_marks)
+        audit_lay.addWidget(self.card_marks)
 
         # Section-wise marks breakdown table
         sec_lbl = QLabel("Section Marks Breakdown:")
         sec_lbl.setStyleSheet("font-weight: 600; color: #475569; margin-top: 6px;")
-        lay.addWidget(sec_lbl)
+        audit_lay.addWidget(sec_lbl)
 
         self.table_sections = QTableWidget(0, 3)
         self.table_sections.setHorizontalHeaderLabels(["Section", "Questions", "Marks"])
         self.table_sections.horizontalHeader().setStretchLastSection(True)
         self.table_sections.setAlternatingRowColors(True)
         self.table_sections.setMaximumHeight(160)
-        lay.addWidget(self.table_sections)
+        audit_lay.addWidget(self.table_sections)
 
         # Estimated time card
         self.card_time = QFrame()
@@ -282,9 +307,12 @@ class WorkspaceScreen(QWidget):
         self.lbl_est_time = QLabel("⏱ Estimated Exam Duration: 0 mins")
         self.lbl_est_time.setStyleSheet("font-weight: 600; color: #0284C7;")
         t_lay.addWidget(self.lbl_est_time)
-        lay.addWidget(self.card_time)
+        audit_lay.addWidget(self.card_time)
 
-        lay.addStretch(1)
+        audit_lay.addStretch(1)
+
+        self.right_tabs.addTab(audit_widget, "📊 Blueprint & Audit")
+        lay.addWidget(self.right_tabs)
 
     def _populate_template_selector(self) -> None:
         self.combo_template.clear()
@@ -292,9 +320,8 @@ class WorkspaceScreen(QWidget):
             tag = " [Built-in]" if tmpl.is_builtin else ""
             self.combo_template.addItem(f"{tmpl.name}{tag}", tmpl.template_id)
 
-    def _toggle_preview_pane(self) -> None:
-        is_visible = self.btn_toggle_preview.isChecked()
-        self.right_preview_container.setVisible(is_visible)
+    def _toggle_preview_pane(self, checked: bool = True) -> None:
+        self.right_preview_container.setVisible(checked)
 
     # ========================================================================
     # Project Loading, Saving & State Management
@@ -326,6 +353,7 @@ class WorkspaceScreen(QWidget):
             # Load into info bar and outline tree
             self.info_bar.load_from_project(project)
             self.outline_tree.load_project(project)
+            self.live_preview.set_project(project)
 
             self.refresh_status_and_summary()
             self.lbl_status_save.setText(f"Loaded: {project.title}")
@@ -542,6 +570,30 @@ class WorkspaceScreen(QWidget):
             self.table_sections.setItem(r, 0, QTableWidgetItem(s.title))
             self.table_sections.setItem(r, 1, QTableWidgetItem(str(len(s.questions))))
             self.table_sections.setItem(r, 2, QTableWidgetItem(sm_str))
+
+        # Schedule debounced refresh for live print preview
+        if hasattr(self, "live_preview") and self.live_preview is not None:
+            self.live_preview.refresh_preview()
+
+    def open_export_dialog(self) -> Optional[ExportDialog]:
+        """Open the multi-format export dialog."""
+        if not self.project:
+            if not os.environ.get("PYTEST_CURRENT_TEST"):
+                QMessageBox.warning(self, "No Paper Loaded", "Please create or open a question paper before exporting.")
+            return None
+        def_dir = self.current_qpf_path.parent if self.current_qpf_path else None
+        dlg = ExportDialog(self.project, default_dir=def_dir, parent=self)
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            dlg.exec()
+        return dlg
+
+    def print_paper(self) -> bool:
+        """Launch the system print dialog and print the active question paper."""
+        if not self.project:
+            if not os.environ.get("PYTEST_CURRENT_TEST"):
+                QMessageBox.warning(self, "No Paper Loaded", "Please create or open a question paper before printing.")
+            return False
+        return PDFExporter.print_project_Interactive(self.project, self)
 
     def _on_back_clicked(self) -> None:
         if self.has_unsaved_changes:
