@@ -473,6 +473,11 @@ class UndoRedoManager:
             self._undo_stack.pop(0)
         self._redo_stack.clear()
 
+    def clear(self) -> None:
+        """Reset the undo and redo history stacks."""
+        self._undo_stack.clear()
+        self._redo_stack.clear()
+
     @property
     def can_undo(self) -> bool:
         """Return True if there is a previous state to revert to."""

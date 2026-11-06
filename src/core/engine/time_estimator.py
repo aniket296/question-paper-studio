@@ -102,7 +102,13 @@ class TimeEstimator:
         return round(base_mins, 1)
 
     @staticmethod
+    def estimate_paper_time_minutes(project: ProjectState) -> ExamTimeReport:
+        """Alias for analyze_project."""
+        return TimeEstimator.analyze_project(project)
+
+    @staticmethod
     def analyze_project(project: ProjectState) -> ExamTimeReport:
+        """Analyze total exam time vs allocated duration."""
         """Analyze total exam time vs allocated duration."""
         breakdown: List[QuestionTimeEstimate] = []
         total_mins = 0.0

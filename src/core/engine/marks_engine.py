@@ -57,6 +57,21 @@ class PaperMarksReport:
     discrepancy_message: Optional[str]
     section_reports: List[SectionMarksSummary] = field(default_factory=list)
 
+    @property
+    def is_balanced(self) -> bool:
+        """Return True if total marks match target without discrepancy."""
+        return not self.has_discrepancy
+
+    @property
+    def total_paper_marks(self) -> float:
+        """Alias for total_effective_marks."""
+        return self.total_effective_marks
+
+    @property
+    def max_marks(self) -> Optional[float]:
+        """Alias for max_marks_target."""
+        return self.max_marks_target
+
 
 class MarksEngine:
     """Calculates section-wise and total marks adhering to parent-child deduplication and choice rules."""
@@ -157,6 +172,11 @@ class MarksEngine:
 
     @staticmethod
     def audit_project(project: ProjectState) -> PaperMarksReport:
+        """Alias for audit_project_marks."""
+        return MarksEngine.audit_project_marks(project)
+
+    @staticmethod
+    def audit_paper(project: ProjectState) -> PaperMarksReport:
         """Alias for audit_project_marks."""
         return MarksEngine.audit_project_marks(project)
 

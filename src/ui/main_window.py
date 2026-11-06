@@ -34,6 +34,7 @@ from src.core.storage.sqlite_bank import SQLiteQuestionBank
 from src.core.storage.template_store import TemplateStore
 from src.ui.home.home_screen import HomeScreen
 from src.ui.template_editor.template_editor_window import TemplateEditorWindow
+from src.ui.workspace.workspace_screen import WorkspaceScreen
 
 DEFAULT_WORKSPACE_DIR = Path.home() / ".question_paper_studio"
 
@@ -108,10 +109,13 @@ class MainWindow(QMainWindow):
         self.template_editor_view.back_to_home_requested.connect(self.navigate_home)
         self.template_editor_view.template_saved.connect(self._on_template_saved)
 
-        # Route 2: Paper Workspace slot
-        self.workspace_view: QWidget = _PlaceholderRouteView("Question Paper Workspace", self)
-        if isinstance(self.workspace_view, _PlaceholderRouteView):
-            self.workspace_view.back_to_home_requested.connect(self.navigate_home)
+        # Route 2: Paper Workspace
+        self.workspace_view = WorkspaceScreen(
+            template_store=self.template_store,
+            parent=self,
+        )
+        self.workspace_view.back_to_home_requested.connect(self.navigate_home)
+        self.workspace_view.project_saved.connect(self._on_project_saved)
 
         self.stack.addWidget(self.home_screen)           # Index 0
         self.stack.addWidget(self.template_editor_view)  # Index 1
@@ -123,6 +127,11 @@ class MainWindow(QMainWindow):
         """Handle template saved in visual editor."""
         self.home_screen.refresh_templates()
         self.statusBar().showMessage(f"Template '{template.name}' saved successfully.")
+
+    def _on_project_saved(self, path: Path) -> None:
+        """Handle question paper saved."""
+        self.home_screen.refresh_recent_projects()
+        self.statusBar().showMessage(f"Saved question paper to {path.name}")
 
     def set_template_editor_widget(self, widget: QWidget) -> None:
         """Replace Route 1 with the full WYSIWYG `TemplateEditorWindow` widget."""
