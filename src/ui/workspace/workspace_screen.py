@@ -111,6 +111,10 @@ class WorkspaceScreen(QWidget):
 
         tb_lay.addStretch(1)
 
+        self.btn_multi_set = QPushButton("🔀 Multi-Set Generator")
+        self.btn_multi_set.clicked.connect(self.open_multi_set_dialog)
+        tb_lay.addWidget(self.btn_multi_set)
+
         self.btn_export = QPushButton("📤 Export (PDF / Word)")
         self.btn_export.clicked.connect(self.open_export_dialog)
         tb_lay.addWidget(self.btn_export)
@@ -574,6 +578,19 @@ class WorkspaceScreen(QWidget):
         # Schedule debounced refresh for live print preview
         if hasattr(self, "live_preview") and self.live_preview is not None:
             self.live_preview.refresh_preview()
+
+    def open_multi_set_dialog(self) -> Optional[QWidget]:
+        """Open the parallel multi-set generator and equivalence matrix dialog."""
+        if not self.project:
+            if not os.environ.get("PYTEST_CURRENT_TEST"):
+                QMessageBox.warning(self, "No Paper Loaded", "Please create or open a question paper before generating multi-sets.")
+            return None
+        from src.ui.advanced.multi_set_dialog import MultiSetDialog
+        def_dir = self.current_qpf_path.parent if self.current_qpf_path else None
+        dlg = MultiSetDialog(self.project, default_export_dir=def_dir, parent=self)
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            dlg.exec()
+        return dlg
 
     def open_export_dialog(self) -> Optional[ExportDialog]:
         """Open the multi-format export dialog."""
