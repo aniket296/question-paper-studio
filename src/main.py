@@ -25,6 +25,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
+from src import __app_name__, __version__
 from src.core.models.enums import QuestionType
 from src.core.models.project_model import ProjectState
 from src.core.models.question_model import MCQData, MCQOption, QuestionNode
@@ -114,6 +115,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         description="Question Paper Studio — Industry-grade Question Paper Generator",
     )
     parser.add_argument(
+        "--version",
+        "-V",
+        action="store_true",
+        help="Print application name and version and exit 0.",
+    )
+    parser.add_argument(
         "--self-test",
         action="store_true",
         help="Run self-diagnostic checks headlessly and exit 0 if healthy.",
@@ -131,6 +138,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
 
     args = parser.parse_args(argv)
+
+    if args.version:
+        print(f"{__app_name__} v{__version__}")
+        return 0
 
     if args.self_test:
         return run_self_test()

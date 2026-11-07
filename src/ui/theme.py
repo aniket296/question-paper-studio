@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Dict, List
 
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication
 
-FONTS_DIR = Path(__file__).resolve().parent.parent.parent / "assets" / "fonts"
-ICONS_DIR = Path(__file__).resolve().parent.parent.parent / "assets" / "icons"
+_BASE_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent.parent))
+FONTS_DIR = _BASE_ROOT / "assets" / "fonts"
+ICONS_DIR = _BASE_ROOT / "assets" / "icons"
 
 LIGHT_PALETTE: Dict[str, str] = {
     "bg_primary": "#F8FAFC",

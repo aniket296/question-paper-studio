@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,7 +24,8 @@ from src.core.models.template_model import (
     Template,
 )
 
-DEFAULT_TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent.parent / "assets" / "templates"
+_BASE_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent.parent.parent))
+DEFAULT_TEMPLATES_DIR = _BASE_ROOT / "assets" / "templates"
 
 
 @dataclass

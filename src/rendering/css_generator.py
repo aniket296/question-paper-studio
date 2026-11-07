@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -9,7 +10,8 @@ from src.core.models.enums import Orientation, PageSize
 from src.core.models.project_model import LayoutSettings, ProjectState
 from src.core.models.template_model import Template
 
-DEFAULT_FONTS_DIR = Path(__file__).resolve().parent.parent.parent / "assets" / "fonts"
+_BASE_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent.parent))
+DEFAULT_FONTS_DIR = _BASE_ROOT / "assets" / "fonts"
 
 
 class CSSGenerator:
