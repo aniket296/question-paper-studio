@@ -112,6 +112,7 @@ class MainWindow(QMainWindow):
         # Route 2: Paper Workspace
         self.workspace_view = WorkspaceScreen(
             template_store=self.template_store,
+            question_bank=self.question_bank,
             parent=self,
         )
         self.workspace_view.back_to_home_requested.connect(self.navigate_home)

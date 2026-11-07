@@ -31,6 +31,7 @@ from src.core.models.project_model import ProjectState
 from src.core.models.question_model import QuestionNode, default_type_data_for
 from src.core.models.template_model import Template
 from src.core.storage.qpf_archive import QPFArchive
+from src.core.storage.sqlite_bank import SQLiteQuestionBank
 from src.core.storage.template_store import TemplateStore
 from src.rendering.pdf_exporter import PDFExporter
 from src.ui.workspace.exam_info_bar import ExamInfoBar
@@ -49,10 +50,12 @@ class WorkspaceScreen(QWidget):
     def __init__(
         self,
         template_store: Optional[TemplateStore] = None,
+        question_bank: Optional[SQLiteQuestionBank] = None,
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
         self.template_store = template_store or TemplateStore()
+        self.question_bank: Optional[SQLiteQuestionBank] = question_bank
         self.project: Optional[ProjectState] = None
         self.current_qpf_path: Optional[Path] = None
         self.has_unsaved_changes: bool = False
@@ -110,6 +113,22 @@ class WorkspaceScreen(QWidget):
         tb_lay.addWidget(self.combo_template)
 
         tb_lay.addStretch(1)
+
+        self.btn_bank = QPushButton("📚 Question Bank")
+        self.btn_bank.clicked.connect(self.open_question_bank_drawer)
+        tb_lay.addWidget(self.btn_bank)
+
+        self.btn_blueprint = QPushButton("📐 Blueprint")
+        self.btn_blueprint.clicked.connect(self.open_blueprint_dialog)
+        tb_lay.addWidget(self.btn_blueprint)
+
+        self.btn_quality = QPushButton("🔍 Quality Audit")
+        self.btn_quality.clicked.connect(self.open_quality_check_panel)
+        tb_lay.addWidget(self.btn_quality)
+
+        self.btn_diagnostics = QPushButton("📊 Post-Exam")
+        self.btn_diagnostics.clicked.connect(self.open_post_exam_dialog)
+        tb_lay.addWidget(self.btn_diagnostics)
 
         self.btn_multi_set = QPushButton("🔀 Multi-Set Generator")
         self.btn_multi_set.clicked.connect(self.open_multi_set_dialog)
@@ -578,6 +597,104 @@ class WorkspaceScreen(QWidget):
         # Schedule debounced refresh for live print preview
         if hasattr(self, "live_preview") and self.live_preview is not None:
             self.live_preview.refresh_preview()
+
+    def open_question_bank_drawer(self) -> Optional[QWidget]:
+        """Open the persistent Question Bank browser, searcher, and injector drawer."""
+        if not self.question_bank:
+            self.question_bank = SQLiteQuestionBank()
+
+        active_q = None
+        selected_q_id = self.outline_tree.get_selected_question_id()
+        if selected_q_id and self.project:
+            lookup = QuestionTreeEngine.find_node(self.project, selected_q_id)
+            if lookup:
+                active_q = lookup.node
+
+        target_sec = self.outline_tree.get_selected_section_id()
+
+        from src.ui.advanced.question_bank_drawer import QuestionBankDrawer
+        dlg = QuestionBankDrawer(
+            bank=self.question_bank,
+            project=self.project,
+            active_question=active_q,
+            target_section_id=target_sec,
+            parent=self,
+        )
+        dlg.question_inserted.connect(self._on_bank_question_inserted)
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            dlg.exec()
+        return dlg
+
+    def _on_bank_question_inserted(self, node: QuestionNode, section_id: str) -> None:
+        """Handle question insertion from Question Bank into active project."""
+        if not self.project:
+            return
+        target_sec = None
+        for sec in self.project.sections:
+            if sec.section_id == section_id:
+                target_sec = sec
+                break
+        if not target_sec and self.project.sections:
+            target_sec = self.project.sections[0]
+
+        if target_sec:
+            target_sec.questions.append(node)
+            self.record_undo_state(f"Insert Question from Bank into {target_sec.title}")
+            self.outline_tree.load_project(self.project, select_question_id=node.question_id)
+            self._on_question_selected(node.question_id)
+
+    def open_blueprint_dialog(self) -> Optional[QWidget]:
+        """Open the examination blueprint matrix designer and pattern preset dialog."""
+        if not self.project:
+            if not os.environ.get("PYTEST_CURRENT_TEST"):
+                QMessageBox.warning(self, "No Paper Loaded", "Please create or open a question paper before opening Blueprint.")
+            return None
+        from src.ui.advanced.blueprint_dialog import BlueprintDialog
+        dlg = BlueprintDialog(self.project, parent=self)
+        dlg.preset_applied.connect(self._on_blueprint_preset_applied)
+        dlg.blueprint_saved.connect(lambda bp: self.refresh_status_and_summary())
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            dlg.exec()
+        return dlg
+
+    def _on_blueprint_preset_applied(self, preset: object) -> None:
+        """Handle application of exam pattern preset to paper structure."""
+        if not self.project:
+            return
+        self.info_bar.load_from_project(self.project)
+        self.outline_tree.load_project(self.project)
+        self.record_undo_state(f"Apply Blueprint Preset")
+
+    def open_quality_check_panel(self) -> Optional[QWidget]:
+        """Open the heuristic quality and compliance integrity audit panel."""
+        if not self.project:
+            if not os.environ.get("PYTEST_CURRENT_TEST"):
+                QMessageBox.warning(self, "No Paper Loaded", "Please create or open a question paper before running Quality Audit.")
+            return None
+        from src.ui.advanced.quality_check_panel import QualityCheckPanel
+        dlg = QualityCheckPanel(self.project, parent=self)
+        dlg.navigate_to_question.connect(self._on_quality_navigate_to_question)
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            dlg.exec()
+        return dlg
+
+    def _on_quality_navigate_to_question(self, question_id: str) -> None:
+        """Focus the specified question in the outline tree and load editor form."""
+        if hasattr(self, "outline_tree") and self.outline_tree:
+            self.outline_tree.select_question(question_id)
+            self._on_question_selected(question_id)
+
+    def open_post_exam_dialog(self) -> Optional[QWidget]:
+        """Open candidate marks entry and psychometric item analysis dialog."""
+        if not self.project:
+            if not os.environ.get("PYTEST_CURRENT_TEST"):
+                QMessageBox.warning(self, "No Paper Loaded", "Please create or open a question paper before post-exam diagnostics.")
+            return None
+        from src.ui.advanced.post_exam_dialog import PostExamDialog
+        dlg = PostExamDialog(self.project, parent=self)
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            dlg.exec()
+        return dlg
 
     def open_multi_set_dialog(self) -> Optional[QWidget]:
         """Open the parallel multi-set generator and equivalence matrix dialog."""

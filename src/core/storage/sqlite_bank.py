@@ -100,7 +100,7 @@ class BankSearchFilter:
 class SQLiteQuestionBank:
     """Offline SQLite3 + FTS5 Question Bank, Revision Manager, and Reusable Asset Library."""
 
-    def __init__(self, db_path: Path | str) -> None:
+    def __init__(self, db_path: Path | str = Path.home() / ".question_paper_studio" / "workspace.db") -> None:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
@@ -388,7 +388,7 @@ class SQLiteQuestionBank:
 
         if f.question_type is not None:
             where_clauses.append("qb.question_type = ?")
-            params.append(f.question_type.value)
+            params.append(f.question_type.value if hasattr(f.question_type, "value") else str(f.question_type))
         if f.subject:
             where_clauses.append("LOWER(qb.subject) = LOWER(?)")
             params.append(f.subject.strip())
@@ -403,10 +403,10 @@ class SQLiteQuestionBank:
             params.append(f.topic.strip())
         if f.difficulty is not None:
             where_clauses.append("qb.difficulty = ?")
-            params.append(f.difficulty.value)
+            params.append(f.difficulty.value if hasattr(f.difficulty, "value") else str(f.difficulty))
         if f.bloom_level is not None:
             where_clauses.append("qb.bloom_level = ?")
-            params.append(f.bloom_level.value)
+            params.append(f.bloom_level.value if hasattr(f.bloom_level, "value") else str(f.bloom_level))
         if f.min_marks is not None:
             where_clauses.append("qb.marks >= ?")
             params.append(f.min_marks)
