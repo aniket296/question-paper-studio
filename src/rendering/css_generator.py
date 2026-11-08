@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 from typing import Optional
@@ -12,6 +13,13 @@ from src.core.models.template_model import Template
 
 _BASE_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent.parent))
 DEFAULT_FONTS_DIR = _BASE_ROOT / "assets" / "fonts"
+
+
+def sanitize_font_family(font_name: str, default: str = "Noto Sans") -> str:
+    """Strip quotes, semicolons, braces, and HTML/CSS control characters from a font family name."""
+    cleaned = re.sub(r"[^0-9a-zA-Z\s\-_]", "", (font_name or "")).strip()
+    cleaned = " ".join(cleaned.split())
+    return cleaned or default
 
 
 class CSSGenerator:
@@ -86,7 +94,7 @@ class CSSGenerator:
         hdr_h = template.header_height_mm
         ftr_h = template.footer_height_mm
         q_space = layout.question_spacing_mm
-        base_font = layout.base_font_family or "Noto Sans"
+        base_font = sanitize_font_family(layout.base_font_family or "Noto Sans")
         base_pt = layout.base_font_size_pt
         cols = layout.columns
 

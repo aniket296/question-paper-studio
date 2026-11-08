@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -226,11 +227,18 @@ class RichTextEditor(QWidget):
         tb_lay.setContentsMargins(4, 2, 4, 2)
         tb_lay.setSpacing(4)
 
-        # Font Family
-        self.combo_font = QFontComboBox()
-        self.combo_font.setMaximumWidth(130)
-        self.combo_font.setCurrentFont(QFont("Noto Sans"))
-        self.combo_font.currentFontChanged.connect(self._on_font_family_changed)
+        # Font Family (use lightweight QComboBox under headless pytest to avoid Windows DirectWrite RPC_E_CANTCALLOUT_ININPUTSYNCCALL)
+        if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+            self.combo_font = QComboBox()
+            for fam in ("Noto Sans", "Noto Sans Devanagari", "Arial", "Times New Roman", "Courier New"):
+                self.combo_font.addItem(fam)
+            self.combo_font.setMaximumWidth(130)
+            self.combo_font.currentTextChanged.connect(lambda fam: self._on_font_family_changed(QFont(fam)))
+        else:
+            self.combo_font = QFontComboBox()
+            self.combo_font.setMaximumWidth(130)
+            self.combo_font.setCurrentFont(QFont("Noto Sans"))
+            self.combo_font.currentFontChanged.connect(self._on_font_family_changed)
         tb_lay.addWidget(self.combo_font)
 
         # Font Size

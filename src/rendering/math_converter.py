@@ -76,7 +76,8 @@ class MathConverter:
         omath = etree.Element(_m_tag("oMath"), nsmap=NSMAP)
         try:
             mathml_str = latex2mathml.converter.convert(cleaned, display="inline")
-            mathml_root = etree.fromstring(mathml_str.encode("utf-8"))
+            safe_parser = etree.XMLParser(resolve_entities=False, no_network=True)
+            mathml_root = etree.fromstring(mathml_str.encode("utf-8"), parser=safe_parser)
             MathConverter._translate_mathml_children_to_omml(mathml_root, omath)
         except Exception:
             # Fallback: emit a valid `<m:r><m:t>` run inside `<m:oMath>`

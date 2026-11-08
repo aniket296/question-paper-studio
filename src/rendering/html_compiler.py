@@ -53,7 +53,7 @@ from src.core.models.question_model import (
 )
 from src.core.models.section_model import ChoiceGroup, Section, SharedPassage
 from src.core.models.template_model import CanvasElement, Template
-from src.rendering.css_generator import CSSGenerator
+from src.rendering.css_generator import CSSGenerator, sanitize_font_family
 
 _BLOCK_LATEX_RE = re.compile(r"\$\$(.+?)\$\$", re.DOTALL)
 _INLINE_LATEX_RE = re.compile(r"(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)")
@@ -214,12 +214,13 @@ class HTMLCompiler:
     ) -> str:
         parts: List[str] = [f'<div class="{zone_class}">']
         for el in elements:
+            safe_font = sanitize_font_family(el.font_family)
             style_tokens = [
                 f"left: {el.x_mm:.2f}mm",
                 f"top: {el.y_mm:.2f}mm",
                 f"width: {el.width_mm:.2f}mm",
                 f"height: {el.height_mm:.2f}mm",
-                f"font-family: '{el.font_family}', 'Noto Sans', 'Noto Sans Devanagari', sans-serif",
+                f"font-family: '{safe_font}', 'Noto Sans', 'Noto Sans Devanagari', sans-serif",
                 f"font-size: {el.font_size_pt:.1f}pt",
                 f"text-align: {el.alignment.value}",
                 f"color: {el.color_hex}",

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pytestqt.qtbot import QtBot
 from PySide6.QtWidgets import QApplication
 
 from src.core.models.enums import BloomLevel, DifficultyLevel, QuestionType
@@ -97,7 +98,7 @@ def sample_project() -> ProjectState:
 
 
 def test_question_bank_drawer_search_insert_save_and_revisions(
-    qapp: QApplication,
+    qtbot: QtBot,
     sample_project: ProjectState,
     tmp_path: Path,
 ) -> None:
@@ -124,6 +125,7 @@ def test_question_bank_drawer_search_insert_save_and_revisions(
 
         # 2. Initialize WorkspaceScreen with bank and project
         ws = WorkspaceScreen(question_bank=bank)
+        qtbot.addWidget(ws)
         ws.load_project(sample_project)
         initial_q_count = len(ws.project.sections[0].questions)
         assert initial_q_count == 3
@@ -134,6 +136,7 @@ def test_question_bank_drawer_search_insert_save_and_revisions(
 
         # 3. Open QuestionBankDrawer via WorkspaceScreen
         drawer = ws.open_question_bank_drawer()
+        qtbot.addWidget(drawer)
         assert isinstance(drawer, QuestionBankDrawer)
         assert drawer.table_results.rowCount() == 2
 
@@ -156,6 +159,7 @@ def test_question_bank_drawer_search_insert_save_and_revisions(
 
         # 5. Test RevisionHistoryDialog & restoring v1
         rev_dlg = drawer._on_view_revisions()
+        qtbot.addWidget(rev_dlg)
         assert isinstance(rev_dlg, RevisionHistoryDialog)
         assert rev_dlg.table_revs.rowCount() >= 2
         rev_dlg._on_restore(1)
@@ -184,7 +188,7 @@ def test_question_bank_drawer_search_insert_save_and_revisions(
 
 
 def test_blueprint_dialog_presets_and_compliance_audit(
-    qapp: QApplication,
+    qtbot: QtBot,
     sample_project: ProjectState,
 ) -> None:
     """Verify BlueprintDialog presets, target distribution editing, and compliance validation."""
@@ -194,9 +198,11 @@ def test_blueprint_dialog_presets_and_compliance_audit(
     assert {"cbse_science_80", "jee_main_100", "univ_semester_50", "unit_quiz_25"}.issubset(preset_ids)
 
     ws = WorkspaceScreen()
+    qtbot.addWidget(ws)
     ws.load_project(sample_project)
 
     dlg = ws.open_blueprint_dialog()
+    qtbot.addWidget(dlg)
     assert isinstance(dlg, BlueprintDialog)
     assert dlg.active_blueprint is not None
 
@@ -241,7 +247,7 @@ def test_blueprint_dialog_presets_and_compliance_audit(
 
 
 def test_quality_check_panel_audit_and_navigation(
-    qapp: QApplication,
+    qtbot: QtBot,
     sample_project: ProjectState,
 ) -> None:
     """Verify QualityCheckPanel heuristic defect detection, health score, and jump-to-question navigation."""
@@ -262,9 +268,11 @@ def test_quality_check_panel_audit_and_navigation(
     sample_project.sections[0].questions.append(bad_mcq)
 
     ws = WorkspaceScreen()
+    qtbot.addWidget(ws)
     ws.load_project(sample_project)
 
     panel = ws.open_quality_check_panel()
+    qtbot.addWidget(panel)
     assert isinstance(panel, QualityCheckPanel)
     assert panel.audit_report is not None
     assert panel.audit_report.critical_count >= 1
@@ -284,15 +292,17 @@ def test_quality_check_panel_audit_and_navigation(
 
 
 def test_post_exam_dialog_psychometrics_and_exports(
-    qapp: QApplication,
+    qtbot: QtBot,
     sample_project: ProjectState,
     tmp_path: Path,
 ) -> None:
     """Verify PostExamDialog candidate grid, P-value & D-value calculations, and CSV/HTML exports."""
     ws = WorkspaceScreen()
+    qtbot.addWidget(ws)
     ws.load_project(sample_project)
 
     dlg = ws.open_post_exam_dialog()
+    qtbot.addWidget(dlg)
     assert isinstance(dlg, PostExamDialog)
     assert len(dlg.questions) == 3
     assert dlg.table_marks.rowCount() == 15

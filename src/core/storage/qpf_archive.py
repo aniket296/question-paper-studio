@@ -191,9 +191,17 @@ class QPFArchive:
             asset_entries = [n for n in names if n.startswith(ASSETS_ARCHIVE_PREFIX) and not n.endswith("/")]
             if asset_entries:
                 extracted_assets_dir.mkdir(parents=True, exist_ok=True)
+                resolved_assets_root = extracted_assets_dir.resolve()
                 for member in asset_entries:
-                    filename = Path(member).name
-                    dest_file = extracted_assets_dir / filename
+                    rel_after_prefix = member[len(ASSETS_ARCHIVE_PREFIX):]
+                    if ".." in Path(rel_after_prefix).parts or rel_after_prefix.startswith(("/", "\\")):
+                        raise ValueError(f"Unsafe path traversal entry detected in QPF archive: '{member}'")
+                    filename = Path(rel_after_prefix).name
+                    if not filename:
+                        continue
+                    dest_file = (extracted_assets_dir / filename).resolve()
+                    if not str(dest_file).startswith(str(resolved_assets_root)):
+                        raise ValueError(f"Asset destination escapes extraction directory: '{member}'")
                     with zf.open(member) as src_stream, dest_file.open("wb") as dst_stream:
                         shutil.copyfileobj(src_stream, dst_stream)
                     asset_map[member] = dest_file
